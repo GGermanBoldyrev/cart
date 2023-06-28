@@ -12,23 +12,19 @@ foreach ($_SESSION['cart'] as $item) {
     $quantity += $item['quantity'];
 }
 
-// Массив id элементов из корзины
-$ids = [];
-foreach ($_SESSION['cart'] as $id => $value) {
-    $ids[] = $id;
-}
+if ($quantity > 0) {
+    // Массив id элементов из корзины
+    $ids = [];
+    foreach ($_SESSION['cart'] as $id => $value) {
+        $ids[] = $id;
+    }
 
-// Если товара нет в корзине, то переходим на страницу с пустой корзиной
-if ($quantity < 1) {
-    header("Location: /empty-cart.php");
-    exit();
+    // SQL запрос
+    $in = str_repeat('?,', count($ids) - 1) . '?';
+    $sql = "SELECT * FROM products WHERE id IN ($in)";
+    $data = $pdo->prepare($sql);
+    $data->execute($ids);
 }
-
-// SQL запрос
-$in = str_repeat('?,', count($ids) - 1) . '?';
-$sql = "SELECT * FROM products WHERE id IN ($in)";
-$data = $pdo->prepare($sql);
-$data->execute($ids);
 
 // Общая стоимость
 $total_price = 0;
@@ -47,18 +43,21 @@ $total_price = 0;
         <div class="nav">
             <ul>
                 <li><a href="/">Главная</a></li>
-                <li><a href="cart.php">Корзина (<?= $quantity?>)</a></li>
+                <li><a href="cart.php">
+                    <?= $quantity > 0 ? "Корзина ($quantity)" : "Корзина" ?>
+                </a></li>
             </ul>
         </div>
         <div>
-            <h2>Корзина</h2>
-            <table>
-                <tr>
-                    <th>Название товара</th>
-                    <th>Стоимость</th>
-                    <th>Колчиество</th>
-                    <th>Общая стоимость</th>
-                </tr>
+            <?php if($quantity > 0) : ?>
+                <h2>Корзина</h2>
+                <table>
+                    <tr>
+                        <th>Название товара</th>
+                        <th>Стоимость</th>
+                        <th>Колчиество</th>
+                        <th>Общая стоимость</th>
+                    </tr>
                 <?php foreach($data->fetchAll() as $item):
                     $quantity = $_SESSION['cart'][$item['id']]['quantity'];
                     $total_price += $item['price'] * $quantity;
@@ -78,6 +77,9 @@ $total_price = 0;
                 <?php endforeach;?>
             </table>
             <h2>Общая стоимость заказа: <?= number_format($total_price)?> рублей</h2>
+            <?php else: ?>
+                <h1>Ваша корзина пустая</h1>
+            <?php endif;?>
         </div>
     </div>
 </body>
